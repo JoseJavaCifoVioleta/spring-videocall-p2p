@@ -15,6 +15,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Este es el punto de encuentro al que se conectará el cliente desde JavaScript
         registry.addEndpoint("/ws-signaling")
                 .setAllowedOriginPatterns("*") // Permite conexiones desde cualquier origen en desarrollo
+                .addInterceptors(new IpHandshakeInterceptor())
                 .withSockJS(); // Habilita SockJS como alternativa si el navegador no soporta WebSockets nativos
     }
 
