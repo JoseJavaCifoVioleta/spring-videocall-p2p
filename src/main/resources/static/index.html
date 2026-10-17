@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sprint 1 - Prueba de Señalización</title>
+    <!-- Importamos las librerías oficiales para el soporte de WebSockets y STOMP -->
+    <!-- Importamos las librerías locales que acabamos de guardar -->
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f4f9; }
+        #chat-container { max-width: 500px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #messages { height: 200px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        input, button { padding: 10px; font-size: 14px; }
+        input { width: 70%; }
+        button { width: 22%; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2>Prueba de WebSockets (Sala 1)</h2>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Escribe un mensaje de prueba...">
+    <button onclick="sendMessage()">Enviar</button>
+</div>
+
+<script>
+    let stompClient = null;
+    // Definimos un nombre de usuario aleatorio para simular participantes distintos
+    const username = "Usuario_" + Math.floor(Math.random() * 100);
+    const roomId = "sala1"; // ID de la sala que capturará el @DestinationVariable de Spring
+
+    function connect() {
+        // Nos conectamos al endpoint físico que configuramos en WebSocketConfig
+        const socket = new SockJS('/ws-signaling');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log('Conectado con éxito al servidor: ' + frame);
+
+            // Nos suscribimos al canal de la sala para recibir lo que envíe el broker
+            stompClient.subscribe('/topic/sala.' + roomId, function (response) {
+                const message = JSON.parse(response.body);
+                displayMessage(message);
+            });
+        }, function (error) {
+            console.error('Error de conexión en el WebSocket: ', error);
+        });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const text = input.value.trim();
+
+        if (text && stompClient) {
+            const chatMessage = {
+                sender: username,
+                content: text,
+                type: 'CHAT'
+            };
+
+            // Enviamos el objeto JSON hacia la ruta mapeada en nuestro SignalingController
+            stompClient.send("/app/chat." + roomId, {}, JSON.stringify(chatMessage));
+            input.value = "";
+        }
+    }
+
+    function displayMessage(message) {
+        const messagesDiv = document.getElementById("messages");
+        const messageElement = document.createElement("p");
+        messageElement.innerHTML = `<strong>${message.sender}:</strong> ${message.content}`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll hacia abajo
+    }
+
+    // Iniciamos la conexión de manera automática al cargar la ventana
+    window.onload = connect;
+</script>
+</body>
+</html>
