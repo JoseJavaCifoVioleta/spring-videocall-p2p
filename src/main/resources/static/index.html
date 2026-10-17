@@ -90,7 +90,7 @@
     let stompClient = null;
     let localStream = null;
     let peerConnection = null;
-    const roomId = "sala1";
+    let roomId = "default"; // Cambiamos const por let para asignarla dinámicamente
     const username = "User_" + Math.floor(Math.random() * 100);
 
     let isAudioMuted = false;
@@ -98,10 +98,24 @@
 
     const rtcConfig = { iceServers: [] };
 
+    // Modificamos el arranque para consultar la sala automática antes de conectar el WebSocket
     window.onload = async () => {
         await initCamera();
+
+        try {
+            // Consultamos al servidor nuestra sala asignada por IP
+            const response = await fetch('/api/my-room');
+            const data = await response.json();
+            roomId = data.roomId;
+            console.log("Sala asignada dinámicamente por red: " + roomId);
+        } catch (error) {
+            console.error("Error al obtener sala dinámica, usando sala por defecto.", error);
+            roomId = "sala-emergencia";
+        }
+
         connectWebSocket();
     };
+
 
     async function initCamera() {
         try {
